@@ -29,6 +29,16 @@
         "category": "Rules Sync"
       },
       {
+        "command": "rulesSync.syncFromCursor",
+        "title": "Sync From Cursor",
+        "category": "Rules Sync"
+      },
+      {
+        "command": "rulesSync.syncFromAntigravity",
+        "title": "Sync From Antigravity",
+        "category": "Rules Sync"
+      },
+      {
         "command": "rulesSync.syncFolder",
         "title": "Sync This Folder",
         "category": "Rules Sync"

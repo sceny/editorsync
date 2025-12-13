@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
-import { syncFile, syncFileByUri, handleDeletion, handleRename, syncAllExistingFiles } from './fileSync';
+import { syncFile, syncFileByUri, handleDeletion, handleRename, syncAllExistingFiles, syncAllFromPlatform } from './fileSync';
 import { syncQueue } from './syncQueue';
 import { getConfig } from './config';
+import { detectPlatformFromPath } from './platforms';
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Rules Sync extension activated');
@@ -26,7 +27,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
     );
 
-    // Register force sync all command (ignores journal, syncs everything)
+    // Register force sync all command (ignores journal)
     const forceSyncAllCommand = vscode.commands.registerCommand(
         'rulesSync.forceSyncAll',
         async () => {
@@ -39,20 +40,59 @@ export function activate(context: vscode.ExtensionContext) {
         }
     );
 
-    // Register sync folder command (for context menu)
-    const syncFolderCommand = vscode.commands.registerCommand(
-        'rulesSync.syncFolder',
+    // Sync from Cursor explicitly
+    const syncFromCursorCommand = vscode.commands.registerCommand(
+        'rulesSync.syncFromCursor',
         async () => {
             if (!getConfig().enabled) {
                 vscode.window.showWarningMessage('Rules Sync is disabled. Enable it in settings first.');
                 return;
             }
-            const count = await syncAllExistingFiles();
-            vscode.window.showInformationMessage(`Rules Sync: Synced ${count} files`);
+            const count = await syncAllFromPlatform('cursor', false);
+            vscode.window.showInformationMessage(`Rules Sync: Synced ${count} files from Cursor`);
         }
     );
 
-    // Monitor file saves (primary sync trigger)
+    // Sync from Antigravity explicitly
+    const syncFromAntigravityCommand = vscode.commands.registerCommand(
+        'rulesSync.syncFromAntigravity',
+        async () => {
+            if (!getConfig().enabled) {
+                vscode.window.showWarningMessage('Rules Sync is disabled. Enable it in settings first.');
+                return;
+            }
+            const count = await syncAllFromPlatform('antigravity', false);
+            vscode.window.showInformationMessage(`Rules Sync: Synced ${count} files from Antigravity`);
+        }
+    );
+
+    // Sync folder command - detects source from folder path
+    const syncFolderCommand = vscode.commands.registerCommand(
+        'rulesSync.syncFolder',
+        async (uri: vscode.Uri) => {
+            if (!getConfig().enabled) {
+                vscode.window.showWarningMessage('Rules Sync is disabled. Enable it in settings first.');
+                return;
+            }
+
+            // Detect source platform from folder path
+            const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+            if (!workspaceFolder) return;
+
+            const relativePath = uri.fsPath.replace(workspaceFolder.uri.fsPath, '').replace(/^[\\/]/, '');
+            const sourceId = detectPlatformFromPath(relativePath);
+
+            if (sourceId) {
+                const count = await syncAllFromPlatform(sourceId, false);
+                vscode.window.showInformationMessage(`Rules Sync: Synced ${count} files from ${sourceId}`);
+            } else {
+                const count = await syncAllExistingFiles();
+                vscode.window.showInformationMessage(`Rules Sync: Synced ${count} files`);
+            }
+        }
+    );
+
+    // Monitor file saves
     const saveDisposable = vscode.workspace.onDidSaveTextDocument(async (document) => {
         syncQueue.queueSync(document.uri.fsPath, () => syncFile(document));
     });
@@ -88,11 +128,11 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
     
-    // File watcher for external changes (git restore, external editors, etc.)
+    // File watcher for external changes (both platforms)
     const watcher = vscode.workspace.createFileSystemWatcher(
         new vscode.RelativePattern(
             vscode.workspace.workspaceFolders?.[0] || '',
-            '{.cursorrules,.cursor/rules/**/*.mdc,.cursor/commands/**/*.md}'
+            '{.cursorrules,.cursor/rules/**/*.mdc,.cursor/commands/**/*.md,.agent/rules/**/*.md,.agent/workflows/**/*.md}'
         )
     );
 
@@ -116,6 +156,8 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         syncAllCommand,
         forceSyncAllCommand,
+        syncFromCursorCommand,
+        syncFromAntigravityCommand,
         syncFolderCommand,
         saveDisposable,
         createDisposable,
