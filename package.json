@@ -1,0 +1,66 @@
+{
+  "name": "rules-sync",
+  "displayName": "Rules Sync",
+  "description": "Synchronize AI coding assistant configuration files between Cursor and Antigravity",
+  "version": "0.1.0",
+  "publisher": "rulessync",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [
+    "workspaceContains:.cursorrules",
+    "workspaceContains:.cursor/rules",
+    "workspaceContains:.cursor/commands",
+    "workspaceContains:.agent/rules",
+    "workspaceContains:.agent/workflows"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Rules Sync",
+      "properties": {
+        "agentSync.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable synchronization of AI assistant configuration files"
+        },
+        "agentSync.deletionBehavior": {
+          "type": "string",
+          "default": "ask",
+          "enum": ["ignore", "delete", "ask"],
+          "enumDescriptions": [
+            "Do nothing when source file is deleted",
+            "Delete the destination file when source is deleted",
+            "Ask the user what to do when source file is deleted"
+          ],
+          "description": "Behavior when a source file is deleted"
+        },
+        "agentSync.limitBehavior": {
+          "type": "string",
+          "default": "warn",
+          "enum": ["warn", "silent"],
+          "enumDescriptions": [
+            "Show a warning when content exceeds Antigravity's 12k character limit",
+            "Sync silently without warnings"
+          ],
+          "description": "Behavior when content exceeds platform limits"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint": "^8.54.0",
+    "typescript": "^5.3.0"
+  }
+}
