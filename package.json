@@ -17,6 +17,38 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "commands": [
+      {
+        "command": "rulesSync.syncAll",
+        "title": "Sync All Rules",
+        "category": "Rules Sync"
+      },
+      {
+        "command": "rulesSync.forceSyncAll",
+        "title": "Force Sync All Rules",
+        "category": "Rules Sync"
+      },
+      {
+        "command": "rulesSync.syncFolder",
+        "title": "Sync This Folder",
+        "category": "Rules Sync"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "rulesSync.syncFolder",
+          "when": "explorerResourceIsFolder && resourcePath =~ /\\.cursor[\\\\\\/](rules|commands)/ || resourcePath =~ /\\.agent[\\\\\\/](rules|workflows)/",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "rulesSync.syncAll",
+          "when": "true"
+        }
+      ]
+    },
     "configuration": {
       "title": "Rules Sync",
       "properties": {

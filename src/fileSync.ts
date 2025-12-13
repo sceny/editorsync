@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { getConfig, ANTIGRAVITY_CHAR_LIMIT } from './config';
+import { getJournal } from './journal';
 
 // Trigger type mapping
 type AntigravityTrigger = 'always' | 'glob' | 'model_decision';
@@ -32,27 +33,112 @@ const FILE_MAPPINGS: FileMapping[] = [
         getDestPath: (_, root) => path.join(root, '.agent', 'rules', 'cursorrules.md'),
         transformContent: (content) => transformCursorToAntigravity(content, false)
     },
-    // .cursor/rules/*.mdc -> .agent/rules/*.md
+    // .cursor/rules/**/*.mdc -> .agent/rules/**/*.md (supports subfolders)
     {
         sourcePattern: /^\.cursor[\/\\]rules[\/\\](.+)\.mdc$/,
         getDestPath: (sourcePath, root) => {
             const match = sourcePath.match(/^\.cursor[\/\\]rules[\/\\](.+)\.mdc$/);
-            const basename = match ? match[1] : 'rule';
-            return path.join(root, '.agent', 'rules', `${basename}.md`);
+            const relativeName = match ? match[1] : 'rule';
+            return path.join(root, '.agent', 'rules', `${relativeName}.md`);
         },
         transformContent: (content) => transformCursorToAntigravity(content, true)
     },
-    // .cursor/commands/*.md -> .agent/workflows/*.md
+    // .cursor/commands/**/*.md -> .agent/workflows/**/*.md (supports subfolders)
     {
         sourcePattern: /^\.cursor[\/\\]commands[\/\\](.+)\.md$/,
         getDestPath: (sourcePath, root) => {
             const match = sourcePath.match(/^\.cursor[\/\\]commands[\/\\](.+)\.md$/);
-            const basename = match ? match[1] : 'workflow';
-            return path.join(root, '.agent', 'workflows', `${basename}.md`);
+            const relativeName = match ? match[1] : 'workflow';
+            return path.join(root, '.agent', 'workflows', `${relativeName}.md`);
         },
         transformContent: (content, sourcePath) => transformCommandToWorkflow(content, sourcePath)
     }
 ];
+
+// Source directories to scan on activation
+const SOURCE_SCAN_PATHS = [
+    { dir: '.cursor/rules', ext: '.mdc' },
+    { dir: '.cursor/commands', ext: '.md' }
+];
+
+// Recursively find all files in a directory with given extension
+function findFilesRecursive(dir: string, ext: string): string[] {
+    const results: string[] = [];
+    if (!fs.existsSync(dir)) return results;
+
+    const items = fs.readdirSync(dir, { withFileTypes: true });
+    for (const item of items) {
+        const fullPath = path.join(dir, item.name);
+        if (item.isDirectory()) {
+            results.push(...findFilesRecursive(fullPath, ext));
+        } else if (item.name.endsWith(ext)) {
+            results.push(fullPath);
+        }
+    }
+    return results;
+}
+
+// Sync all existing source files (called on activation or manually)
+// force: if true, sync all files regardless of journal state
+export async function syncAllExistingFiles(force: boolean = false): Promise<number> {
+    const config = getConfig();
+    if (!config.enabled) {
+        return 0;
+    }
+
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
+        return 0;
+    }
+
+    let syncedCount = 0;
+
+    for (const folder of workspaceFolders) {
+        const root = folder.uri.fsPath;
+        const journal = getJournal(root);
+        const isFirstSync = journal.isEmpty();
+        const shouldForce = force || isFirstSync;
+
+        // Check .cursorrules
+        const cursorrules = path.join(root, '.cursorrules');
+        if (fs.existsSync(cursorrules) && (shouldForce || journal.needsSync(cursorrules))) {
+            await syncFileByPath(cursorrules, root);
+            journal.recordSync(cursorrules);
+            syncedCount++;
+        }
+
+        // Scan source directories
+        for (const { dir, ext } of SOURCE_SCAN_PATHS) {
+            const fullDir = path.join(root, dir);
+            const files = findFilesRecursive(fullDir, ext);
+
+            for (const file of files) {
+                if (shouldForce || journal.needsSync(file)) {
+                    await syncFileByPath(file, root);
+                    journal.recordSync(file);
+                    syncedCount++;
+                }
+            }
+        }
+
+        // Save journal after processing each workspace
+        journal.save();
+    }
+
+    return syncedCount;
+}
+
+// Sync by absolute path (for initial sync)
+async function syncFileByPath(absolutePath: string, workspaceRoot: string): Promise<void> {
+    const config = getConfig();
+    const relativePath = path.relative(workspaceRoot, absolutePath);
+    const mapping = getMapping(relativePath);
+
+    if (!mapping) return;
+
+    const content = fs.readFileSync(absolutePath, 'utf8');
+    await writeToDestination(content, relativePath, mapping, workspaceRoot, config);
+}
 
 function parseFrontmatter(content: string): { frontmatter: Record<string, unknown>; body: string } {
     const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
@@ -154,6 +240,7 @@ export function getMapping(relativePath: string): FileMapping | undefined {
     return FILE_MAPPINGS.find(m => m.sourcePattern.test(relativePath));
 }
 
+// Sync from TextDocument (for save events)
 export async function syncFile(document: vscode.TextDocument): Promise<void> {
     const config = getConfig();
     if (!config.enabled) {
@@ -173,7 +260,46 @@ export async function syncFile(document: vscode.TextDocument): Promise<void> {
     }
     
     const content = document.getText();
-    const destPath = mapping.getDestPath(relativePath, workspaceFolder.uri.fsPath);
+    await writeToDestination(content, relativePath, mapping, workspaceFolder.uri.fsPath, config);
+}
+
+// Sync from URI (for create/change events - reads from disk)
+export async function syncFileByUri(uri: vscode.Uri): Promise<void> {
+    const config = getConfig();
+    if (!config.enabled) {
+        return;
+    }
+
+    const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+    if (!workspaceFolder) {
+        return;
+    }
+
+    const relativePath = path.relative(workspaceFolder.uri.fsPath, uri.fsPath);
+    const mapping = getMapping(relativePath);
+
+    if (!mapping) {
+        return;
+    }
+
+    // Read content from disk
+    if (!fs.existsSync(uri.fsPath)) {
+        return;
+    }
+
+    const content = fs.readFileSync(uri.fsPath, 'utf8');
+    await writeToDestination(content, relativePath, mapping, workspaceFolder.uri.fsPath, config);
+}
+
+// Common write logic
+async function writeToDestination(
+    content: string,
+    relativePath: string,
+    mapping: FileMapping,
+    workspaceRoot: string,
+    config: ReturnType<typeof getConfig>
+): Promise<void> {
+    const destPath = mapping.getDestPath(relativePath, workspaceRoot);
     const transformedContent = mapping.transformContent(content, relativePath);
     
     // Check character limit
@@ -183,7 +309,7 @@ export async function syncFile(document: vscode.TextDocument): Promise<void> {
         );
     }
     
-    // Ensure destination directory exists
+    // Ensure destination directory exists (supports subfolders)
     const destDir = path.dirname(destPath);
     if (!fs.existsSync(destDir)) {
         fs.mkdirSync(destDir, { recursive: true });
@@ -193,7 +319,21 @@ export async function syncFile(document: vscode.TextDocument): Promise<void> {
     fs.writeFileSync(destPath, transformedContent, 'utf8');
 }
 
-export async function handleDeletion(deletedUri: vscode.Uri): Promise<void> {
+// Handle file rename/move
+export async function handleRename(oldUri: vscode.Uri, newUri: vscode.Uri): Promise<void> {
+    const config = getConfig();
+    if (!config.enabled) {
+        return;
+    }
+
+    // Delete old destination
+    await handleDeletion(oldUri, true); // force delete, no ask
+
+    // Sync new location
+    await syncFileByUri(newUri);
+}
+
+export async function handleDeletion(deletedUri: vscode.Uri, forceDelete: boolean = false): Promise<void> {
     const config = getConfig();
     if (!config.enabled) {
         return;
@@ -217,7 +357,9 @@ export async function handleDeletion(deletedUri: vscode.Uri): Promise<void> {
         return;
     }
     
-    switch (config.deletionBehavior) {
+    const behavior = forceDelete ? 'delete' : config.deletionBehavior;
+
+    switch (behavior) {
         case 'ignore':
             // Do nothing
             break;
