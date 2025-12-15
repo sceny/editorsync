@@ -6,7 +6,7 @@
 
 ## Settings
 
-All settings are prefixed with `scenyAIEditorSync.`
+All settings are prefixed with `scenyEditorSync.`
 
 ### Core Settings
 
@@ -62,6 +62,8 @@ When empty, platforms are auto-detected based on folder existence.
 
 ### Logging Settings
 
+> These appear under **Sceny Editor Sync › Logging** in VS Code settings.
+
 #### `logLevel`
 | Property | Value |
 |----------|-------|
@@ -85,12 +87,12 @@ Logs are written to `.rulessync/logs/sceny-YYYY-MM-DD.log`
 ```json
 // .vscode/settings.json
 {
-    "scenyAIEditorSync.enabled": true,
-    "scenyAIEditorSync.deletionBehavior": "delete",
-    "scenyAIEditorSync.limitBehavior": "warn",
-    "scenyAIEditorSync.syncPlatforms": ["cursor", "antigravity"],
-    "scenyAIEditorSync.logLevel": "debug",
-    "scenyAIEditorSync.logRetentionDays": 14
+    "scenyEditorSync.enabled": true,
+    "scenyEditorSync.deletionBehavior": "delete",
+    "scenyEditorSync.limitBehavior": "warn",
+    "scenyEditorSync.syncPlatforms": ["cursor", "antigravity"],
+    "scenyEditorSync.logLevel": "debug",
+    "scenyEditorSync.logRetentionDays": 14
 }
 ```
 

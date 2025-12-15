@@ -13,7 +13,7 @@ description: Always load and consider project documentation before making decisi
 2. **docs/architecture.md** - System design, project structure, data flow
 3. **docs/platforms.md** - Platform file formats, frontmatter fields, format conversion
 4. **docs/sync-logic.md** - Synchronization mechanics, loop prevention
-5. **docs/configuration.md** - Available settings
+5. **docs/configuration.md** - Settings reference (scenyEditorSync prefix)
 6. **docs/code-review.md** - Code quality standards, utilities, testing
 
 ## Behavior

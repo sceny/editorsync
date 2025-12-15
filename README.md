@@ -1,12 +1,12 @@
-# Sceny AI Editor Sync
+# Sceny Editor Sync
 
 > Sync AI assistant configuration files between Cursor, Antigravity, and VS Code.
 
-[![VS Code Extension](https://img.shields.io/badge/VS%20Code-Extension-blue)](https://marketplace.visualstudio.com/items?itemName=sceny.sceny-sync)
+[![VS Code Extension](https://img.shields.io/badge/VS%20Code-Extension-blue)](https://marketplace.visualstudio.com/items?itemName=sceny.sceny-editor-sync)
 
 ## Overview
 
-Sceny AI Editor Sync keeps your AI assistant rules synchronized across multiple editors. Edit your rules in Cursor, and they'll automatically appear in VS Code's GitHub Copilot format (and vice versa).
+Sceny Editor Sync keeps your AI assistant rules synchronized across multiple editors. Edit your rules in Cursor, and they'll automatically appear in VS Code's GitHub Copilot format (and vice versa).
 
 ### Supported Platforms
 
@@ -20,7 +20,7 @@ Sceny AI Editor Sync keeps your AI assistant rules synchronized across multiple 
 
 1. Install the extension
 2. Open Settings → Search "Sceny"
-3. Enable **Sceny AI Editor Sync: Enabled**
+3. Enable **Sceny Editor Sync: Enabled**
 4. Edit any rules file → it syncs to other platforms automatically
 
 ## Features
@@ -44,11 +44,11 @@ Sceny AI Editor Sync keeps your AI assistant rules synchronized across multiple 
 
 | Command | Description |
 |---------|-------------|
-| `Sceny AI Editor Sync: Sync All` | Sync all files from default platform |
-| `Sceny AI Editor Sync: Force Sync All` | Force re-sync ignoring cache |
-| `Sceny AI Editor Sync: Sync from Cursor` | Sync using Cursor as source |
-| `Sceny AI Editor Sync: Sync from Antigravity` | Sync using Antigravity as source |
-| `Sceny AI Editor Sync: Sync from VS Code` | Sync using VS Code Copilot as source |
+| `Sceny Editor Sync: Sync All` | Sync all files from default platform |
+| `Sceny Editor Sync: Force Sync All` | Force re-sync ignoring cache |
+| `Sceny Editor Sync: Sync from Cursor` | Sync using Cursor as source |
+| `Sceny Editor Sync: Sync from Antigravity` | Sync using Antigravity as source |
+| `Sceny Editor Sync: Sync from VS Code` | Sync using VS Code Copilot as source |
 
 ## Development
 
