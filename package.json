@@ -1,13 +1,18 @@
 {
-  "name": "rules-sync",
-  "displayName": "Rules Sync",
-  "description": "Synchronize AI coding assistant configuration files between Cursor and Antigravity",
-  "version": "0.1.0",
-  "publisher": "rulessync",
+  "name": "sceny-sync",
+  "displayName": "Sceny AI Editor Sync",
+  "description": "Synchronize AI editor rules between Cursor, VS Code, and Antigravity",
+  "version": "0.1.4",
+  "publisher": "sceny",
+  "author": {
+    "name": "Sceny"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
-  "categories": ["Other"],
+  "categories": [
+    "Other"
+  ],
   "activationEvents": [
     "workspaceContains:.cursorrules",
     "workspaceContains:.cursor/rules",
@@ -19,58 +24,83 @@
   "contributes": {
     "commands": [
       {
-        "command": "rulesSync.syncAll",
-        "title": "Sync All Rules",
-        "category": "Rules Sync"
+        "command": "scenyAIEditorSync.syncAll",
+        "title": "Sync All",
+        "category": "Sceny AI Editor Sync"
       },
       {
-        "command": "rulesSync.forceSyncAll",
-        "title": "Force Sync All Rules",
-        "category": "Rules Sync"
+        "command": "scenyAIEditorSync.forceSyncAll",
+        "title": "Force Sync All",
+        "category": "Sceny AI Editor Sync"
       },
       {
-        "command": "rulesSync.syncFromCursor",
+        "command": "scenyAIEditorSync.syncFromCursor",
         "title": "Sync From Cursor",
-        "category": "Rules Sync"
+        "category": "Sceny AI Editor Sync"
       },
       {
-        "command": "rulesSync.syncFromAntigravity",
+        "command": "scenyAIEditorSync.syncFromAntigravity",
         "title": "Sync From Antigravity",
-        "category": "Rules Sync"
+        "category": "Sceny AI Editor Sync"
       },
       {
-        "command": "rulesSync.syncFolder",
-        "title": "Sync This Folder",
-        "category": "Rules Sync"
+        "command": "scenyAIEditorSync.syncFromVSCode",
+        "title": "Sync From VS Code",
+        "category": "Sceny AI Editor Sync"
+      },
+      {
+        "command": "scenyAIEditorSync.syncFolder",
+        "title": "Sync From Here",
+        "category": "Sceny AI Editor Sync"
       }
     ],
     "menus": {
       "explorer/context": [
         {
-          "command": "rulesSync.syncFolder",
-          "when": "explorerResourceIsFolder && resourcePath =~ /\\.cursor[\\\\\\/](rules|commands)/ || resourcePath =~ /\\.agent[\\\\\\/](rules|workflows)/",
-          "group": "navigation"
+          "command": "scenyAIEditorSync.syncFolder",
+          "when": "explorerResourceIsFolder && resourcePath =~ /\\.cursor[\\\\\\/](rules|commands)/ || resourcePath =~ /\\.agent[\\\\\\/](rules|workflows)/ || resourcePath =~ /\\.github/",
+          "group": "7_modification"
         }
       ],
       "commandPalette": [
         {
-          "command": "rulesSync.syncAll",
+          "command": "scenyAIEditorSync.syncAll",
+          "when": "true"
+        },
+        {
+          "command": "scenyAIEditorSync.forceSyncAll",
+          "when": "true"
+        },
+        {
+          "command": "scenyAIEditorSync.syncFromCursor",
+          "when": "true"
+        },
+        {
+          "command": "scenyAIEditorSync.syncFromAntigravity",
+          "when": "true"
+        },
+        {
+          "command": "scenyAIEditorSync.syncFromVSCode",
           "when": "true"
         }
       ]
     },
     "configuration": {
-      "title": "Rules Sync",
+      "title": "Sceny AI Editor Sync",
       "properties": {
-        "agentSync.enabled": {
+        "scenyAIEditorSync.enabled": {
           "type": "boolean",
           "default": false,
           "description": "Enable synchronization of AI assistant configuration files"
         },
-        "agentSync.deletionBehavior": {
+        "scenyAIEditorSync.deletionBehavior": {
           "type": "string",
           "default": "ask",
-          "enum": ["ignore", "delete", "ask"],
+          "enum": [
+            "ignore",
+            "delete",
+            "ask"
+          ],
           "enumDescriptions": [
             "Do nothing when source file is deleted",
             "Delete the destination file when source is deleted",
@@ -78,15 +108,55 @@
           ],
           "description": "Behavior when a source file is deleted"
         },
-        "agentSync.limitBehavior": {
+        "scenyAIEditorSync.limitBehavior": {
           "type": "string",
           "default": "warn",
-          "enum": ["warn", "silent"],
+          "enum": [
+            "warn",
+            "silent"
+          ],
           "enumDescriptions": [
             "Show a warning when content exceeds Antigravity's 12k character limit",
             "Sync silently without warnings"
           ],
           "description": "Behavior when content exceeds platform limits"
+        },
+        "scenyAIEditorSync.syncPlatforms": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string",
+            "enum": [
+              "cursor",
+              "antigravity",
+              "vscode"
+            ]
+          },
+          "description": "Platforms to sync to. Empty = auto-detect from available folders."
+        },
+        "scenyAIEditorSync.logLevel": {
+          "type": "string",
+          "default": "info",
+          "enum": [
+            "error",
+            "warn",
+            "info",
+            "debug"
+          ],
+          "enumDescriptions": [
+            "Only log errors",
+            "Log warnings and errors",
+            "Log info, warnings, and errors",
+            "Log everything including debug info"
+          ],
+          "description": "Log level for .rulessync/logs/"
+        },
+        "scenyAIEditorSync.logRetentionDays": {
+          "type": "number",
+          "default": 7,
+          "minimum": 1,
+          "maximum": 90,
+          "description": "Number of days to keep log files before auto-cleanup"
         }
       }
     }
@@ -104,5 +174,9 @@
     "@typescript-eslint/parser": "^6.13.0",
     "eslint": "^8.54.0",
     "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0"
   }
 }

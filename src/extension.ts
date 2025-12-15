@@ -3,104 +3,135 @@ import { syncFile, syncFileByUri, handleDeletion, handleRename, syncAllExistingF
 import { syncQueue } from './syncQueue';
 import { getConfig } from './config';
 import { detectPlatformFromPath } from './platforms';
+import { logger, updateLogLevel, closeLoggers } from './logger';
 
 export function activate(context: vscode.ExtensionContext) {
-    console.log('Rules Sync extension activated');
+    logger.info('Sceny AI Editor Rules Sync activated');
     
     // Initial sync of existing files
     syncAllExistingFiles().then(count => {
         if (count > 0 && getConfig().enabled) {
-            console.log(`Rules Sync: Synced ${count} existing files on activation`);
+            logger.info(`Synced ${count} existing files on activation`);
         }
     });
 
-    // Register sync all command (command palette)
+    // Listen for config changes to update log level
+    const configChangeDisposable = vscode.workspace.onDidChangeConfiguration(e => {
+        if (e.affectsConfiguration('scenyAIEditorSync.logLevel')) {
+            updateLogLevel();
+            logger.info('Log level updated');
+        }
+    });
+
+    // Register sync all command
     const syncAllCommand = vscode.commands.registerCommand(
-        'rulesSync.syncAll',
+        'scenyAIEditorSync.syncAll',
         async () => {
             if (!getConfig().enabled) {
-                vscode.window.showWarningMessage('Rules Sync is disabled. Enable it in settings first.');
+                vscode.window.showWarningMessage('Sceny is disabled. Enable it in settings first.');
                 return;
             }
             const count = await syncAllExistingFiles();
-            vscode.window.showInformationMessage(`Rules Sync: Synced ${count} files`);
+            vscode.window.showInformationMessage(`Sceny: Synced ${count} files`);
         }
     );
 
-    // Register force sync all command (ignores journal)
+    // Force sync all command
     const forceSyncAllCommand = vscode.commands.registerCommand(
-        'rulesSync.forceSyncAll',
+        'scenyAIEditorSync.forceSyncAll',
         async () => {
             if (!getConfig().enabled) {
-                vscode.window.showWarningMessage('Rules Sync is disabled. Enable it in settings first.');
+                vscode.window.showWarningMessage('Sceny is disabled. Enable it in settings first.');
                 return;
             }
             const count = await syncAllExistingFiles(true);
-            vscode.window.showInformationMessage(`Rules Sync: Force synced ${count} files`);
+            vscode.window.showInformationMessage(`Sceny: Force synced ${count} files`);
         }
     );
 
-    // Sync from Cursor explicitly
+    // Sync from Cursor
     const syncFromCursorCommand = vscode.commands.registerCommand(
-        'rulesSync.syncFromCursor',
+        'scenyAIEditorSync.syncFromCursor',
         async () => {
             if (!getConfig().enabled) {
-                vscode.window.showWarningMessage('Rules Sync is disabled. Enable it in settings first.');
+                vscode.window.showWarningMessage('Sceny is disabled. Enable it in settings first.');
                 return;
             }
             const count = await syncAllFromPlatform('cursor', false);
-            vscode.window.showInformationMessage(`Rules Sync: Synced ${count} files from Cursor`);
+            vscode.window.showInformationMessage(`Sceny: Synced ${count} files from Cursor`);
         }
     );
 
-    // Sync from Antigravity explicitly
+    // Sync from Antigravity
     const syncFromAntigravityCommand = vscode.commands.registerCommand(
-        'rulesSync.syncFromAntigravity',
+        'scenyAIEditorSync.syncFromAntigravity',
         async () => {
             if (!getConfig().enabled) {
-                vscode.window.showWarningMessage('Rules Sync is disabled. Enable it in settings first.');
+                vscode.window.showWarningMessage('Sceny is disabled. Enable it in settings first.');
                 return;
             }
             const count = await syncAllFromPlatform('antigravity', false);
-            vscode.window.showInformationMessage(`Rules Sync: Synced ${count} files from Antigravity`);
+            vscode.window.showInformationMessage(`Sceny: Synced ${count} files from Antigravity`);
         }
     );
 
-    // Sync folder command - detects source from folder path
+    // Sync from VS Code
+    const syncFromVSCodeCommand = vscode.commands.registerCommand(
+        'scenyAIEditorSync.syncFromVSCode',
+        async () => {
+            if (!getConfig().enabled) {
+                vscode.window.showWarningMessage('Sceny is disabled. Enable it in settings first.');
+                return;
+            }
+            const count = await syncAllFromPlatform('vscode', false);
+            vscode.window.showInformationMessage(`Sceny: Synced ${count} files from VS Code`);
+        }
+    );
+
+    // Sync folder context menu command
     const syncFolderCommand = vscode.commands.registerCommand(
-        'rulesSync.syncFolder',
+        'scenyAIEditorSync.syncFolder',
         async (uri: vscode.Uri) => {
             if (!getConfig().enabled) {
-                vscode.window.showWarningMessage('Rules Sync is disabled. Enable it in settings first.');
+                vscode.window.showWarningMessage('Sceny is disabled. Enable it in settings first.');
                 return;
             }
 
-            // Detect source platform from folder path
             const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
             if (!workspaceFolder) return;
 
-            const relativePath = uri.fsPath.replace(workspaceFolder.uri.fsPath, '').replace(/^[\\/]/, '');
+            const relativePath = uri.fsPath.replace(workspaceFolder.uri.fsPath, '').replace(/^[\/\\]/, '');
             const sourceId = detectPlatformFromPath(relativePath);
 
             if (sourceId) {
                 const count = await syncAllFromPlatform(sourceId, false);
-                vscode.window.showInformationMessage(`Rules Sync: Synced ${count} files from ${sourceId}`);
+                vscode.window.showInformationMessage(`Sceny: Synced ${count} files from ${sourceId}`);
             } else {
                 const count = await syncAllExistingFiles();
-                vscode.window.showInformationMessage(`Rules Sync: Synced ${count} files`);
+                vscode.window.showInformationMessage(`Sceny: Synced ${count} files`);
             }
         }
     );
 
     // Monitor file saves
     const saveDisposable = vscode.workspace.onDidSaveTextDocument(async (document) => {
-        syncQueue.queueSync(document.uri.fsPath, () => syncFile(document));
+        try {
+            logger.info('File saved event', { file: document.uri.fsPath });
+            syncQueue.queueSync(document.uri.fsPath, () => syncFile(document));
+        } catch (error) {
+            logger.error('Error in save handler', { error: String(error) });
+        }
     });
 
     // Monitor file creations
     const createDisposable = vscode.workspace.onDidCreateFiles(async (event) => {
         for (const uri of event.files) {
-            syncQueue.queueSync(uri.fsPath, () => syncFileByUri(uri));
+            try {
+                logger.info('File created event', { file: uri.fsPath });
+                syncQueue.queueSync(uri.fsPath, () => syncFileByUri(uri));
+            } catch (error) {
+                logger.error('Error in create handler', { error: String(error) });
+            }
         }
     });
 
@@ -111,7 +142,7 @@ export function activate(context: vscode.ExtensionContext) {
             try {
                 await handleRename(oldUri, newUri);
             } catch (error) {
-                console.error('Rules Sync: Error handling rename', error);
+                logger.error('Error handling rename', { error: String(error) });
             }
         }
     });
@@ -123,53 +154,70 @@ export function activate(context: vscode.ExtensionContext) {
             try {
                 await handleDeletion(uri);
             } catch (error) {
-                console.error('Rules Sync: Error handling deletion', error);
+                logger.error('Error handling deletion', { error: String(error) });
             }
         }
     });
     
-    // File watcher for external changes (both platforms)
-    const watcher = vscode.workspace.createFileSystemWatcher(
-        new vscode.RelativePattern(
-            vscode.workspace.workspaceFolders?.[0] || '',
-            '{.cursorrules,.cursor/rules/**/*.mdc,.cursor/commands/**/*.md,.agent/rules/**/*.md,.agent/workflows/**/*.md}'
-        )
-    );
+    // File watchers for external changes - one per workspace folder
+    const watcherDisposables: vscode.Disposable[] = [];
+    for (const folder of vscode.workspace.workspaceFolders || []) {
+        logger.info('Setting up watcher for workspace', { folder: folder.uri.fsPath });
+        const watcher = vscode.workspace.createFileSystemWatcher(
+            new vscode.RelativePattern(
+                folder,
+                '{.cursorrules,.cursor/rules/**/*.mdc,.cursor/rules/**/*.md,.cursor/commands/**/*.md,.agent/rules/**/*.md,.agent/workflows/**/*.md,.github/instructions/**/*.md}'
+            )
+        );
 
-    const watcherChangeDisposable = watcher.onDidChange(async (uri) => {
-        syncQueue.queueSync(uri.fsPath, () => syncFileByUri(uri));
-    });
+        watcherDisposables.push(
+            watcher.onDidChange(async (uri) => {
+                try {
+                    logger.info('File changed (external)', { file: uri.fsPath });
+                    syncQueue.queueSync(uri.fsPath, () => syncFileByUri(uri));
+                } catch (error) {
+                    logger.error('Error in external change handler', { error: String(error) });
+                }
+            }),
+            watcher.onDidCreate(async (uri) => {
+                try {
+                    logger.info('File created (external)', { file: uri.fsPath });
+                    syncQueue.queueSync(uri.fsPath, () => syncFileByUri(uri));
+                } catch (error) {
+                    logger.error('Error in external create handler', { error: String(error) });
+                }
+            }),
+            watcher.onDidDelete(async (uri) => {
+                logger.info('File deleted (external)', { file: uri.fsPath });
+                syncQueue.clearMetadata(uri.fsPath);
+                try {
+                    await handleDeletion(uri);
+                } catch (error) {
+                    logger.error('Error handling external deletion', { error: String(error) });
+                }
+            }),
+            watcher
+        );
+    }
 
-    const watcherCreateDisposable = watcher.onDidCreate(async (uri) => {
-        syncQueue.queueSync(uri.fsPath, () => syncFileByUri(uri));
-    });
-
-    const watcherDeleteDisposable = watcher.onDidDelete(async (uri) => {
-        syncQueue.clearMetadata(uri.fsPath);
-        try {
-            await handleDeletion(uri);
-        } catch (error) {
-            console.error('Rules Sync: Error handling external deletion', error);
-        }
-    });
 
     context.subscriptions.push(
         syncAllCommand,
         forceSyncAllCommand,
         syncFromCursorCommand,
         syncFromAntigravityCommand,
+        syncFromVSCodeCommand,
         syncFolderCommand,
+        configChangeDisposable,
         saveDisposable,
         createDisposable,
         renameDisposable,
         deleteDisposable,
-        watcher,
-        watcherChangeDisposable,
-        watcherCreateDisposable,
-        watcherDeleteDisposable
+        ...watcherDisposables
     );
 }
 
 export function deactivate() {
-    console.log('Rules Sync extension deactivated');
+    logger.info('Sceny AI Editor Rules Sync deactivated');
+    closeLoggers();
 }

@@ -1,21 +1,26 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { logger } from './logger';
+import { normalizePath } from './utils';
 
 /**
- * SyncJournal: Persists sync metadata to .rulessync/journal.json
- * - Tracks file size/mtime for each synced file
- * - Used on activation to only sync files that have changed since last sync
+ * SyncJournal: Tracks files written by this extension
+ * 
+ * Simple approach: Any file written by the extension is tracked.
+ * Before syncing, check if the triggering file was just written by us.
+ * If file matches our recorded state, skip to prevent loops.
  */
 
-interface FileEntry {
+interface FileRecord {
     size: number;
     mtime: number;
-    syncedAt: number;
+    writtenAt: number;
 }
 
 interface JournalData {
     version: 1;
-    files: Record<string, FileEntry>;
+    /** All files written by this extension (for loop detection) */
+    files: Record<string, FileRecord>;
 }
 
 const JOURNAL_DIR = '.rulessync';
@@ -39,7 +44,12 @@ export class SyncJournal {
         try {
             if (fs.existsSync(this.journalPath)) {
                 const content = fs.readFileSync(this.journalPath, 'utf8');
-                return JSON.parse(content);
+                const data = JSON.parse(content);
+                // Migrate older versions
+                if (data.version < 1) {
+                    return { version: 1, files: {} };
+                }
+                return data;
             }
         } catch (error) {
             console.error('SyncJournal: Error loading journal', error);
@@ -48,57 +58,87 @@ export class SyncJournal {
     }
     
     /**
-     * Check if a file needs syncing based on metadata
+     * Check if a file change should be skipped (was just written by us)
+     * Returns true if the file matches our recorded write state
      */
-    needsSync(filePath: string): boolean {
-        const relativePath = path.relative(this.workspaceRoot, filePath);
-        const entry = this.data.files[relativePath];
+    wasWrittenByUs(filePath: string): boolean {
+        const relativePath = normalizePath(path.relative(this.workspaceRoot, filePath));
+        const record = this.data.files[relativePath];
         
-        if (!entry) {
-            return true; // Never synced
+        if (!record) {
+            logger.info(`Journal: No record for ${relativePath}`);
+            return false;
         }
         
         try {
             const stats = fs.statSync(filePath);
-            return stats.size !== entry.size || stats.mtimeMs !== entry.mtime;
-        } catch {
-            return false; // File doesn't exist
+            const timeDiff = Math.abs(stats.mtimeMs - record.mtime);
+            const sizeMatch = stats.size === record.size;
+            const timeMatch = timeDiff < 2000;
+
+            if (!sizeMatch || !timeMatch) {
+                logger.info(`Journal mismatch for ${relativePath}:`, {
+                    currentSize: stats.size,
+                    recordedSize: record.size,
+                    currentMtime: stats.mtimeMs,
+                    recordedMtime: record.mtime,
+                    timeDiff,
+                    match: sizeMatch && timeMatch
+                });
+            }
+
+            return sizeMatch && timeMatch;
+        } catch (e) {
+            return false;
         }
     }
     
     /**
-     * Record that a file was synced
+     * Record that we wrote a file
      */
-    recordSync(filePath: string): void {
-        const relativePath = path.relative(this.workspaceRoot, filePath);
+    recordWrite(filePath: string): void {
+        const relativePath = normalizePath(path.relative(this.workspaceRoot, filePath));
         
         try {
             const stats = fs.statSync(filePath);
             this.data.files[relativePath] = {
                 size: stats.size,
                 mtime: stats.mtimeMs,
-                syncedAt: Date.now()
+                writtenAt: Date.now()
             };
             this.dirty = true;
+            logger.info(`Journal recorded ${relativePath}`, { size: stats.size, mtime: stats.mtimeMs });
         } catch (error) {
-            console.error(`SyncJournal: Error recording sync for ${filePath}`, error);
+            console.error(`SyncJournal: Error recording write for ${filePath}`, error);
         }
     }
     
     /**
-     * Remove a file from the journal (after deletion)
+     * Remove a file from tracking (after deletion)
      */
-    removeEntry(filePath: string): void {
-        const relativePath = path.relative(this.workspaceRoot, filePath);
-        delete this.data.files[relativePath];
-        this.dirty = true;
+    removeFile(filePath: string): void {
+        const relativePath = normalizePath(path.relative(this.workspaceRoot, filePath));
+        if (this.data.files[relativePath]) {
+            delete this.data.files[relativePath];
+            this.dirty = true;
+        }
     }
     
     /**
-     * Check if journal is empty (first sync scenario)
+     * Clean up old entries (files that no longer exist or are stale)
      */
-    isEmpty(): boolean {
-        return Object.keys(this.data.files).length === 0;
+    cleanup(): void {
+        const now = Date.now();
+        const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+
+        for (const [relativePath, record] of Object.entries(this.data.files)) {
+            const fullPath = path.join(this.workspaceRoot, relativePath);
+            // Remove if file doesn't exist or record is older than 24h
+            if (!fs.existsSync(fullPath) || (now - record.writtenAt) > maxAge) {
+                delete this.data.files[relativePath];
+                this.dirty = true;
+            }
+        }
     }
     
     /**
