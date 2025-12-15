@@ -1,6 +1,7 @@
 {
   "name": "sceny-editor-sync",
   "displayName": "Sceny Editor Sync",
+  "icon": "icon.png",
   "description": "Synchronize AI editor rules between Cursor, VS Code, and Antigravity",
   "version": "0.1.4",
   "publisher": "sceny",
