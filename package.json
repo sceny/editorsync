@@ -1,6 +1,6 @@
 {
-  "name": "sceny-sync",
-  "displayName": "Sceny AI Editor Sync",
+  "name": "sceny-editor-sync",
+  "displayName": "Sceny Editor Sync",
   "description": "Synchronize AI editor rules between Cursor, VS Code, and Antigravity",
   "version": "0.1.4",
   "publisher": "sceny",
@@ -24,142 +24,149 @@
   "contributes": {
     "commands": [
       {
-        "command": "scenyAIEditorSync.syncAll",
+        "command": "scenyEditorSync.syncAll",
         "title": "Sync All",
-        "category": "Sceny AI Editor Sync"
+        "category": "Sceny Editor Sync"
       },
       {
-        "command": "scenyAIEditorSync.forceSyncAll",
+        "command": "scenyEditorSync.forceSyncAll",
         "title": "Force Sync All",
-        "category": "Sceny AI Editor Sync"
+        "category": "Sceny Editor Sync"
       },
       {
-        "command": "scenyAIEditorSync.syncFromCursor",
+        "command": "scenyEditorSync.syncFromCursor",
         "title": "Sync From Cursor",
-        "category": "Sceny AI Editor Sync"
+        "category": "Sceny Editor Sync"
       },
       {
-        "command": "scenyAIEditorSync.syncFromAntigravity",
+        "command": "scenyEditorSync.syncFromAntigravity",
         "title": "Sync From Antigravity",
-        "category": "Sceny AI Editor Sync"
+        "category": "Sceny Editor Sync"
       },
       {
-        "command": "scenyAIEditorSync.syncFromVSCode",
+        "command": "scenyEditorSync.syncFromVSCode",
         "title": "Sync From VS Code",
-        "category": "Sceny AI Editor Sync"
+        "category": "Sceny Editor Sync"
       },
       {
-        "command": "scenyAIEditorSync.syncFolder",
+        "command": "scenyEditorSync.syncFolder",
         "title": "Sync From Here",
-        "category": "Sceny AI Editor Sync"
+        "category": "Sceny Editor Sync"
       }
     ],
     "menus": {
       "explorer/context": [
         {
-          "command": "scenyAIEditorSync.syncFolder",
+          "command": "scenyEditorSync.syncFolder",
           "when": "explorerResourceIsFolder && resourcePath =~ /\\.cursor[\\\\\\/](rules|commands)/ || resourcePath =~ /\\.agent[\\\\\\/](rules|workflows)/ || resourcePath =~ /\\.github/",
           "group": "7_modification"
         }
       ],
       "commandPalette": [
         {
-          "command": "scenyAIEditorSync.syncAll",
+          "command": "scenyEditorSync.syncAll",
           "when": "true"
         },
         {
-          "command": "scenyAIEditorSync.forceSyncAll",
+          "command": "scenyEditorSync.forceSyncAll",
           "when": "true"
         },
         {
-          "command": "scenyAIEditorSync.syncFromCursor",
+          "command": "scenyEditorSync.syncFromCursor",
           "when": "true"
         },
         {
-          "command": "scenyAIEditorSync.syncFromAntigravity",
+          "command": "scenyEditorSync.syncFromAntigravity",
           "when": "true"
         },
         {
-          "command": "scenyAIEditorSync.syncFromVSCode",
+          "command": "scenyEditorSync.syncFromVSCode",
           "when": "true"
         }
       ]
     },
-    "configuration": {
-      "title": "Sceny AI Editor Sync",
-      "properties": {
-        "scenyAIEditorSync.enabled": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable synchronization of AI assistant configuration files"
-        },
-        "scenyAIEditorSync.deletionBehavior": {
-          "type": "string",
-          "default": "ask",
-          "enum": [
-            "ignore",
-            "delete",
-            "ask"
-          ],
-          "enumDescriptions": [
-            "Do nothing when source file is deleted",
-            "Delete the destination file when source is deleted",
-            "Ask the user what to do when source file is deleted"
-          ],
-          "description": "Behavior when a source file is deleted"
-        },
-        "scenyAIEditorSync.limitBehavior": {
-          "type": "string",
-          "default": "warn",
-          "enum": [
-            "warn",
-            "silent"
-          ],
-          "enumDescriptions": [
-            "Show a warning when content exceeds Antigravity's 12k character limit",
-            "Sync silently without warnings"
-          ],
-          "description": "Behavior when content exceeds platform limits"
-        },
-        "scenyAIEditorSync.syncPlatforms": {
-          "type": "array",
-          "default": [],
-          "items": {
-            "type": "string",
-            "enum": [
-              "cursor",
-              "antigravity",
-              "vscode"
-            ]
+    "configuration": [
+      {
+        "title": "Sceny Editor Sync",
+        "properties": {
+          "scenyEditorSync.enabled": {
+            "type": "boolean",
+            "default": false,
+            "description": "Enable synchronization of AI assistant configuration files"
           },
-          "description": "Platforms to sync to. Empty = auto-detect from available folders."
-        },
-        "scenyAIEditorSync.logLevel": {
-          "type": "string",
-          "default": "info",
-          "enum": [
-            "error",
-            "warn",
-            "info",
-            "debug"
-          ],
-          "enumDescriptions": [
-            "Only log errors",
-            "Log warnings and errors",
-            "Log info, warnings, and errors",
-            "Log everything including debug info"
-          ],
-          "description": "Log level for .rulessync/logs/"
-        },
-        "scenyAIEditorSync.logRetentionDays": {
-          "type": "number",
-          "default": 7,
-          "minimum": 1,
-          "maximum": 90,
-          "description": "Number of days to keep log files before auto-cleanup"
+          "scenyEditorSync.deletionBehavior": {
+            "type": "string",
+            "default": "ask",
+            "enum": [
+              "ignore",
+              "delete",
+              "ask"
+            ],
+            "enumDescriptions": [
+              "Do nothing when source file is deleted",
+              "Delete the destination file when source is deleted",
+              "Ask the user what to do when source file is deleted"
+            ],
+            "description": "Behavior when a source file is deleted"
+          },
+          "scenyEditorSync.limitBehavior": {
+            "type": "string",
+            "default": "warn",
+            "enum": [
+              "warn",
+              "silent"
+            ],
+            "enumDescriptions": [
+              "Show a warning when content exceeds Antigravity's 12k character limit",
+              "Sync silently without warnings"
+            ],
+            "description": "Behavior when content exceeds platform limits"
+          },
+          "scenyEditorSync.syncPlatforms": {
+            "type": "array",
+            "default": [],
+            "items": {
+              "type": "string",
+              "enum": [
+                "cursor",
+                "antigravity",
+                "vscode"
+              ]
+            },
+            "description": "Platforms to sync to. Empty = auto-detect from available folders."
+          }
+        }
+      },
+      {
+        "title": "Sceny Editor Sync › Logging",
+        "properties": {
+          "scenyEditorSync.logLevel": {
+            "type": "string",
+            "default": "info",
+            "enum": [
+              "error",
+              "warn",
+              "info",
+              "debug"
+            ],
+            "enumDescriptions": [
+              "Only log errors",
+              "Log warnings and errors",
+              "Log info, warnings, and errors",
+              "Log everything including debug info"
+            ],
+            "description": "Log level for .rulessync/logs/"
+          },
+          "scenyEditorSync.logRetentionDays": {
+            "type": "number",
+            "default": 7,
+            "minimum": 1,
+            "maximum": 90,
+            "description": "Number of days to keep log files before auto-cleanup"
+          }
         }
       }
-    }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

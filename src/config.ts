@@ -14,7 +14,7 @@ export interface SyncConfig {
 export const ANTIGRAVITY_CHAR_LIMIT = 12000;
 
 export function getConfig(): SyncConfig {
-    const config = vscode.workspace.getConfiguration('scenyAIEditorSync');
+    const config = vscode.workspace.getConfiguration('scenyEditorSync');
     return {
         enabled: config.get<boolean>('enabled', false),
         deletionBehavior: config.get<DeletionBehavior>('deletionBehavior', 'ask'),

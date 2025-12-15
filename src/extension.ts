@@ -17,7 +17,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Listen for config changes to update log level
     const configChangeDisposable = vscode.workspace.onDidChangeConfiguration(e => {
-        if (e.affectsConfiguration('scenyAIEditorSync.logLevel')) {
+        if (e.affectsConfiguration('scenyEditorSync.logLevel')) {
             updateLogLevel();
             logger.info('Log level updated');
         }
@@ -25,7 +25,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Register sync all command
     const syncAllCommand = vscode.commands.registerCommand(
-        'scenyAIEditorSync.syncAll',
+        'scenyEditorSync.syncAll',
         async () => {
             if (!getConfig().enabled) {
                 vscode.window.showWarningMessage('Sceny is disabled. Enable it in settings first.');
@@ -38,7 +38,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Force sync all command
     const forceSyncAllCommand = vscode.commands.registerCommand(
-        'scenyAIEditorSync.forceSyncAll',
+        'scenyEditorSync.forceSyncAll',
         async () => {
             if (!getConfig().enabled) {
                 vscode.window.showWarningMessage('Sceny is disabled. Enable it in settings first.');
@@ -51,7 +51,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Sync from Cursor
     const syncFromCursorCommand = vscode.commands.registerCommand(
-        'scenyAIEditorSync.syncFromCursor',
+        'scenyEditorSync.syncFromCursor',
         async () => {
             if (!getConfig().enabled) {
                 vscode.window.showWarningMessage('Sceny is disabled. Enable it in settings first.');
@@ -64,7 +64,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Sync from Antigravity
     const syncFromAntigravityCommand = vscode.commands.registerCommand(
-        'scenyAIEditorSync.syncFromAntigravity',
+        'scenyEditorSync.syncFromAntigravity',
         async () => {
             if (!getConfig().enabled) {
                 vscode.window.showWarningMessage('Sceny is disabled. Enable it in settings first.');
@@ -77,7 +77,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Sync from VS Code
     const syncFromVSCodeCommand = vscode.commands.registerCommand(
-        'scenyAIEditorSync.syncFromVSCode',
+        'scenyEditorSync.syncFromVSCode',
         async () => {
             if (!getConfig().enabled) {
                 vscode.window.showWarningMessage('Sceny is disabled. Enable it in settings first.');
@@ -90,7 +90,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Sync folder context menu command
     const syncFolderCommand = vscode.commands.registerCommand(
-        'scenyAIEditorSync.syncFolder',
+        'scenyEditorSync.syncFolder',
         async (uri: vscode.Uri) => {
             if (!getConfig().enabled) {
                 vscode.window.showWarningMessage('Sceny is disabled. Enable it in settings first.');

@@ -12,7 +12,7 @@ interface LoggerConfig {
 }
 
 function getLoggerConfig(): LoggerConfig {
-    const config = vscode.workspace.getConfiguration('scenyAIEditorSync');
+    const config = vscode.workspace.getConfiguration('scenyEditorSync');
     return {
         level: config.get<LogLevel>('logLevel', 'info'),
         retentionDays: config.get<number>('logRetentionDays', 7)
