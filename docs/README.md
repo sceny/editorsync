@@ -1,10 +1,12 @@
+<img src="../icon.png" alt="Sceny" width="32" align="left" style="margin-right: 10px;">
+
 # Documentation
 
 [← Back to README](../README.md)
 
 ---
 
-This folder contains detailed documentation for the Sceny AI Editor Sync extension.
+This folder contains detailed documentation for the Sceny Editor Sync extension.
 
 ## Contents
 

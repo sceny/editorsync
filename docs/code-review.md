@@ -1,3 +1,5 @@
+<img src="../icon.png" alt="Sceny" width="32" align="left" style="margin-right: 10px;">
+
 # Code Quality
 
 [← Documentation](./README.md) · [README](../README.md)

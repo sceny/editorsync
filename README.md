@@ -1,8 +1,17 @@
-# Sceny Editor Sync
-
-> Sync AI assistant configuration files between Cursor, Antigravity, and VS Code.
-
-[![VS Code Extension](https://img.shields.io/badge/VS%20Code-Extension-blue)](https://marketplace.visualstudio.com/items?itemName=sceny.sceny-editor-sync)
+<table>
+  <tr>
+    <td width="140" valign="top">
+      <img src="docs/assets/logo.png" alt="Sceny" width="128">
+    </td>
+    <td valign="top">
+      <h1 style="margin: 0;">Sceny Editor Sync</h1>
+      <span>Synchronize AI editor rules between Cursor, VS Code, and Antigravity</span><br><br>
+      <a href="https://marketplace.visualstudio.com/items?itemName=sceny.sceny-editor-sync"><img src="https://img.shields.io/badge/VS%20Code-Extension-blue" alt="VS Code Extension"></a>
+      <img src="https://img.shields.io/badge/build-passing-brightgreen" alt="Build Status">
+      <img src="https://img.shields.io/badge/version-0.1.4-blue" alt="Version">
+    </td>
+  </tr>
+</table>
 
 ## Overview
 

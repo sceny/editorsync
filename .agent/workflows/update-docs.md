@@ -51,6 +51,28 @@ Changes to make:
 4. **Link between docs** - Use relative links with breadcrumbs
 5. **Update version** - Bump version in package.json if significant
 
+## Branding Layout
+
+### README.md (main)
+Add the big logo centered at the top:
+```html
+<p align="center">
+  <img src="docs/assets/logo.png" alt="Sceny Editor Sync" width="200">
+</p>
+```
+
+### All docs/ files
+Add the small icon header left-aligned before the title:
+```html
+<img src="../icon.png" alt="Sceny" width="32" align="left" style="margin-right: 10px;">
+
+# Title
+```
+
+**Assets:**
+- `docs/assets/logo.png` - Large logo for README
+- `icon.png` - Small icon for doc headers
+
 ## Verification
 
 After updating:

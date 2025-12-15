@@ -1,3 +1,5 @@
+<img src="../icon.png" alt="Sceny" width="32" align="left" style="margin-right: 10px;">
+
 # Architecture
 
 [← Documentation](./README.md) · [README](../README.md)
@@ -6,7 +8,7 @@
 
 ## Overview
 
-Sceny AI Editor Sync uses an **Intermediate Model** pattern to synchronize AI editor rules between platforms.
+Sceny Editor Sync uses an **Intermediate Model** pattern to synchronize AI editor rules between platforms.
 
 ```mermaid
 flowchart LR

@@ -1,3 +1,5 @@
+<img src="../icon.png" alt="Sceny" width="32" align="left" style="margin-right: 10px;">
+
 # Troubleshooting
 
 [← Documentation](./README.md) · [README](../README.md)
