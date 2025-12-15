@@ -21,7 +21,7 @@ function exportRules(workspaceRoot: string): IntermediateRule[] {
 
         rules.push({
             name,
-            trigger: (frontmatter.trigger as 'always' | 'glob' | 'model_decision') || 'glob',
+            trigger: (frontmatter.trigger as 'always' | 'glob' | 'model_decision' | 'manual') || 'glob',
             globs: frontmatter.globs ? [frontmatter.globs as string] : undefined,
             description: frontmatter.description as string | undefined,
             content: body,

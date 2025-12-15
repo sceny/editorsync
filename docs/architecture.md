@@ -6,17 +6,17 @@
 
 ## Overview
 
-Sceny AI Editor Sync uses an **Intermediate Model** pattern to minimize complexity when syncing between N platforms.
+Sceny AI Editor Sync uses an **Intermediate Model** pattern to synchronize AI editor rules between platforms.
 
 ```mermaid
 flowchart LR
     subgraph Sources
-        C["Cursor (.cursor/)"]
-        A["Antigravity (.agent/)"]
-        V["VS Code (.github/)"]
+        C["Cursor"]
+        A["Antigravity"]
+        V["VS Code"]
     end
     
-    subgraph Model
+    subgraph Core
         M["Intermediate Model"]
     end
     
@@ -34,109 +34,79 @@ flowchart LR
     M -->|import| V2
 ```
 
-### Why Intermediate Model?
-
-Without it, adding a new platform would require N×(N-1) transforms.  
-With it, we only need 2×N transforms (export + import per platform).
+Adding a new platform requires only 2 transforms (export + import) instead of N×(N-1).
 
 ---
 
-## Components
+## Project Structure
 
-### Core Files
-
-| File | Responsibility |
-|------|----------------|
-| `extension.ts` | VS Code extension entry point, event handlers with error boundaries |
-| `fileSync.ts` | Sync orchestration, coordinates all operations |
-| `model.ts` | Intermediate model types |
-| `transforms.ts` | Frontmatter parsing, format conversion |
-
-### Platform Modules (`platforms/`)
-
-| File | Responsibility |
-|------|----------------|
-| `index.ts` | Platform registry, detection, export/import functions |
-| `types.ts` | Platform interface and PlatformId type |
-| `helpers.ts` | Shared utilities (findFilesRecursive, ensureDir) |
-| `cursor.ts` | Cursor platform implementation |
-| `antigravity.ts` | Antigravity platform implementation |
-| `vscode.ts` | VS Code Copilot platform implementation |
-
-### Infrastructure
-
-| File | Responsibility |
-|------|----------------|
-| `utils.ts` | Shared utilities (normalizePath, ensureDir, ensureGitignore) |
-| `journal.ts` | Loop prevention via write tracking |
-| `syncLock.ts` | Concurrency control via `fs.watch` file locking |
-| `syncQueue.ts` | Debouncing, per-file async chains |
-| `config.ts` | VS Code settings access |
-| `logger.ts` | Winston-based rotating logs |
+```
+src/
+├── extension.ts        # VS Code entry point, event handlers
+├── fileSync.ts         # Sync orchestration
+├── model.ts            # Intermediate model types
+├── transforms.ts       # Frontmatter parsing
+├── utils.ts            # Shared utilities
+├── journal.ts          # Loop prevention
+├── syncLock.ts         # Concurrency control (fs.watch)
+├── syncQueue.ts        # Debouncing
+├── config.ts           # Settings access
+├── logger.ts           # Winston rotating logs
+└── platforms/
+    ├── index.ts        # Registry and API
+    ├── types.ts        # Platform interface
+    ├── helpers.ts      # File operations
+    ├── cursor.ts       # Cursor platform
+    ├── antigravity.ts  # Antigravity platform
+    └── vscode.ts       # VS Code platform
+```
 
 ---
 
 ## Data Flow
 
-### On File Save
-
 ```mermaid
 sequenceDiagram
     participant User
-    participant VSCode
     participant Extension
     participant Journal
     participant Platform
 
-    User->>VSCode: Save .cursor/rules/foo.mdc
-    VSCode->>Extension: onDidSaveTextDocument
-    Extension->>Journal: wasWrittenByUs(foo.mdc)?
-    alt Was written by us
+    User->>Extension: Save file
+    Extension->>Journal: wasWrittenByUs?
+    alt Bounceback
         Journal-->>Extension: true (skip)
     else User edit
         Journal-->>Extension: false
-        Extension->>Platform: exportFromPlatform(cursor)
-        Platform-->>Extension: IntermediateModel
-        Extension->>Platform: importToPlatform(model, antigravity)
-        Platform-->>Extension: writtenPaths[]
-        Extension->>Journal: recordWrite(each path)
-        Extension->>Journal: save()
+        Extension->>Platform: export → model
+        Extension->>Platform: import → targets
+        Extension->>Journal: recordWrite()
     end
 ```
 
-### Loop Prevention
+---
 
-The journal tracks every file we write with its size and mtime. When a file change is detected:
+## Key Mechanisms
 
-1. Check if this file was recently written by us
-2. Compare current size/mtime with recorded values
-3. If match within 2 seconds, skip (it's our own write)
-4. If no match, proceed with sync
+### Loop Prevention (Journal)
+Tracks file writes with size/mtime. Skips if file matches recorded state.
+
+### Concurrency (SyncLock)
+Uses `fs.watch` to react immediately when lock is released. Atomic `wx` flag for lock creation.
+
+### Error Boundaries
+All event handlers wrapped in try-catch with logger.error.
+
+### Testing
+Jest + ts-jest with 21 unit tests covering transforms, utils, and helpers.
 
 ---
 
 ## Design Decisions
 
-### 1. File-Based Locking with fs.watch
-
-**Why**: Multiple VS Code windows can open the same workspace. File locks work across processes.
-
-**How**: Uses `fs.watch` to react immediately when lock is released. The `wx` flag ensures atomic lock creation. 60-second stale lock detection as safety net only.
-
-### 2. Journal for Loop Detection
-
-**Why**: Watcher fires for ALL file changes, including our own writes. Need to distinguish user edits from our writes.
-
-**Source files are also recorded** to prevent redundant syncs when multiple editors have the same workspace open. See [Sync Logic → Why Record Source Files](./sync-logic.md#why-record-source-files-too) for the detailed cross-editor coordination scenario.
-
-### 3. Per-Workspace State
-
-**Why**: Journals, locks, and logs are per-workspace. Allows multiple workspaces without interference.
-
-**Storage**: `.rulessync/` directory (gitignored by default)
-
-### 4. Modular Platform Architecture
-
-**Why**: Each platform has distinct file formats and locations. Separating into modules makes the code easier to maintain and extend.
-
-**Structure**: `platforms/` directory with one file per platform plus shared helpers.
+| Decision | Why |
+|----------|-----|
+| File-based locking | Works across VS Code windows/processes |
+| fs.watch for lock | Immediate response, no polling |
+| Per-workspace state | Multiple workspaces don't interfere |
+| Modular platforms | Easy to maintain and extend |

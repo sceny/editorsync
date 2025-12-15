@@ -35,11 +35,13 @@ function exportRules(workspaceRoot: string): IntermediateRule[] {
     for (const file of files) {
         const content = fs.readFileSync(file, 'utf8');
         const { frontmatter, body } = parseFrontmatter(content);
-        const name = path.relative(rulesDir, file).replace(/(\\.mdc|\\.md)$/, '');
+        const name = path.relative(rulesDir, file).replace(/(\.mdc|\.md)$/, '');
 
-        let trigger: 'always' | 'glob' | 'model_decision' = 'glob';
+        let trigger: 'always' | 'glob' | 'model_decision' | 'manual' = 'glob';
         if (frontmatter.alwaysApply === true) trigger = 'always';
         else if (frontmatter.description && !frontmatter.globs) trigger = 'model_decision';
+        else if (frontmatter.globs) trigger = 'glob';
+        else trigger = 'manual'; // alwaysApply: false, no description, no globs
 
         rules.push({
             name,
@@ -63,7 +65,7 @@ function exportWorkflows(workspaceRoot: string): IntermediateWorkflow[] {
     for (const file of files) {
         const content = fs.readFileSync(file, 'utf8');
         const { frontmatter, body } = parseFrontmatter(content);
-        const name = path.relative(commandsDir, file).replace(/\\.md$/, '');
+        const name = path.relative(commandsDir, file).replace(/\.md$/, '');
 
         workflows.push({
             name,
@@ -91,7 +93,7 @@ function importRules(rules: IntermediateRule[], workspaceRoot: string): string[]
         if (rule.globs?.length) lines.push(`globs: ${rule.globs[0]}`);
         if (rule.description) lines.push(`description: ${rule.description}`);
 
-        const frontmatter = lines.length ? `---\\n${lines.join('\\n')}\\n---\\n` : '';
+        const frontmatter = lines.length ? `---\n${lines.join('\n')}\n---\n` : '';
         const content = frontmatter + rule.content;
 
         const filePath = path.join(rulesDir, `${rule.name}.mdc`);
@@ -110,7 +112,7 @@ function importWorkflows(workflows: IntermediateWorkflow[], workspaceRoot: strin
     for (const wf of workflows) {
         if (wf.source === 'cursor') continue;
 
-        const content = `---\\ndescription: ${wf.description}\\n---\\n${wf.content}`;
+        const content = `---\ndescription: ${wf.description}\n---\n${wf.content}`;
         const filePath = path.join(commandsDir, `${wf.name}.md`);
         ensureDir(path.dirname(filePath));
         fs.writeFileSync(filePath, content, 'utf8');

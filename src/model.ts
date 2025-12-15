@@ -10,7 +10,7 @@ export interface IntermediateRule {
     name: string;
     
     /** When this rule should be applied */
-    trigger: 'always' | 'glob' | 'model_decision';
+    trigger: 'always' | 'glob' | 'model_decision' | 'manual';
     
     /** Glob patterns for file-scoped rules */
     globs?: string[];

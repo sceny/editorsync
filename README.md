@@ -62,8 +62,11 @@ npm run compile
 # Watch mode
 npm run watch
 
-# Package
-npm run package
+# Run tests
+npm test
+
+# Test with coverage
+npm run test:coverage
 ```
 
 ## License

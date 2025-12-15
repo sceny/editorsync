@@ -55,7 +55,7 @@ description: "What this command does"
 **Frontmatter fields:**
 ```yaml
 ---
-trigger: always|glob|model_decision
+trigger: always|glob|model_decision|manual
 globs: "**/*.ts"          # Only for trigger: glob
 description: "..."        # Only for trigger: model_decision
 ---
@@ -103,13 +103,19 @@ VS Code Copilot does not currently support workflows.
 
 When syncing between platforms, frontmatter is automatically converted:
 
-| Source | Target | Conversion |
-|--------|--------|------------|
-| Cursor `alwaysApply: true` | Antigravity | `trigger: always` |
-| Cursor `globs` without description | Antigravity | `trigger: glob` |
-| Cursor `description` without globs | Antigravity | `trigger: model_decision` |
-| Antigravity `trigger: always` | Cursor | `alwaysApply: true` |
-| Antigravity `trigger: glob/model_decision` | Cursor | `alwaysApply: false` |
+| Cursor | Antigravity |
+|--------|-------------|
+| `alwaysApply: true` | `trigger: always` |
+| `alwaysApply: false` + `globs` | `trigger: glob` |
+| `alwaysApply: false` + `description` (no globs) | `trigger: model_decision` |
+| `alwaysApply: false` (no description, no globs) | `trigger: manual` |
+
+| Antigravity | Cursor |
+|-------------|--------|
+| `trigger: always` | `alwaysApply: true` |
+| `trigger: glob` | `alwaysApply: false` + globs |
+| `trigger: model_decision` | `alwaysApply: false` + description |
+| `trigger: manual` | `alwaysApply: false` (no globs, no description) |
 
 ## Extension Mapping
 
